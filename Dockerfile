@@ -4,4 +4,4 @@ RUN apt-get update && apt-get install -y libcairo2-dev libjpeg-dev libpango1.0-d
 COPY package.json .
 RUN yarn install
 COPY . .
-CMD ['yarn','start']
+CMD ["yarn","start"]

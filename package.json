@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "axios": "^0.17.1",
+    "canvas": "^1.6.9",
+    "micro": "^9.1.0",
+    "micro-dev": "^2.2.0",
+    "screeps-api": "^1.4.0"
+  },
+  "scripts": {
+    "start": "micro",
+    "dev": "micro-dev"
+  },
+  "name": "screeps-shot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Adam Shumann",
+  "license": "MIT"
+}

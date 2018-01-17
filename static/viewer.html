@@ -10,6 +10,7 @@
 			html, body {
 				margin: 0;
 				padding: 0;
+				background-color: black;
 			}
 			canvas {
 				position: fixed;
@@ -24,27 +25,31 @@
 		<script>
 			let ctx = canvas.getContext('2d')
 			let es = new EventSource(location.href.replace(/viewer$/,'stream'))
-			let nextFrame
+			let frame = new Image()
+			frame.onload = () => update = true
+			let update = false
+			canvas.width = window.innerWidth
+			canvas.height = window.innerHeight
 			es.addEventListener('frame', (msg) => {
-				canvas.width = window.innerWidth
-				canvas.height = window.innerHeight
-				let img = new Image()
-				img.onload = () => {
-					let can = document.createElement('canvas')
-					can.width = can.height = 11 * 50
-					let c = can.getContext('2d')
-					c.drawImage(img, 0, 0)
-					// ctx.drawImage(can, 0, 0)
-					nextFrame = can
-				}
-				img.src = msg.data
+				// let img = new Image()
+				// img.onload = () => {
+				// 	let can = document.createElement('canvas')
+				// 	can.width = can.height = 11 * 50
+				// 	let c = can.getContext('2d')
+				// 	c.drawImage(img, 0, 0)
+				// 	// ctx.drawImage(can, 0, 0)
+				// 	 = can
+				// }
+				// img.src = msg.data
+				if(update) return
+				frame.src = msg.data
 			})
 			render()
 			function render() {
 				requestAnimationFrame(render)
-				if(nextFrame){
-					ctx.drawImage(nextFrame, 0, 0)
-					nextFrame = false
+				if(update){
+					ctx.drawImage(frame, 0, 0)
+					update = false
 				}
 			}
 		</script>

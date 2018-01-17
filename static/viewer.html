@@ -28,29 +28,31 @@
 			let frame = new Image()
 			frame.onload = () => update = true
 			let update = false
-			canvas.width = window.innerWidth
-			canvas.height = window.innerHeight
+
+
 			es.addEventListener('frame', (msg) => {
-				// let img = new Image()
-				// img.onload = () => {
-				// 	let can = document.createElement('canvas')
-				// 	can.width = can.height = 11 * 50
-				// 	let c = can.getContext('2d')
-				// 	c.drawImage(img, 0, 0)
-				// 	// ctx.drawImage(can, 0, 0)
-				// 	 = can
-				// }
-				// img.src = msg.data
 				if(update) return
 				frame.src = msg.data
 			})
+			window.addEventListener('resize', resize)
+			resize()
 			render()
+
+
 			function render() {
 				requestAnimationFrame(render)
 				if(update){
-					ctx.drawImage(frame, 0, 0)
+					let x = Math.floor((canvas.width / 2) - (frame.width / 2))
+					let y = Math.floor((canvas.height / 2) - (frame.height / 2))
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					ctx.drawImage(frame, x, y)
 					update = false
 				}
+			}
+
+			function resize() {
+				canvas.width = window.innerWidth
+				canvas.height = window.innerHeight
 			}
 		</script>
 	</body>

@@ -6,6 +6,8 @@ const { send } = require('micro')
 const Canvas = require('canvas')
 const axios = require('axios')
 const imgCache = {}
+const apiCache = {}
+const roomCache = {}
 
 const config = {
   register: true,
@@ -44,7 +46,6 @@ async function getMapImage(room) {
   const url = await getMapImageUrl(room)
   const data = await axios.get(url, { responseType: 'arraybuffer' })
   const img = new Canvas.Image()
-  console.log(data.data)
   img.src = data.data
   imgCache[room] = img
   return img
@@ -63,8 +64,8 @@ module.exports = (req, res) => {
     return send(res, 304, 'Not Modified')
   }
   res.setHeader('content-type','image/png')
-  res.setHeader('cache-control','max-age=10')
-  res.setHeader('etag', etag())
+  // res.setHeader('cache-control','max-age=10')
+  // res.setHeader('etag', etag())
   return captureMap({ proto, hostname, port })
 }
 
@@ -78,47 +79,48 @@ async function captureMap (opts) {
       getMapImage(`W${x}N${y}`)
     }
   }
-  const api = new ScreepsAPI()
-  api.setServer(Object.assign({}, config, opts))
-  if (config.register) {
-    console.log('register')
-    await api.raw.register.submit(config.username, config.email, config.password, { main: '' })
+  let api = apiCache[opts.hostname]
+  if (!api || api.socket.readyState !== api.socket.OPEN) {
+    console.log(`Connecting to ${opts.hostname}`)
+    api = apiCache[opts.hostname] = new ScreepsAPI()
+    api.setServer(Object.assign({}, config, opts))
+    if (config.register) {
+      console.log('register')
+      await api.raw.register.submit(config.username, config.email, config.password, { main: '' })
+    }
+    console.log('auth')
+    console.log(await api.auth())
+    console.log('connect')
+    await api.socket.connect()
+    roomCache[opts.hostname] = {}
+    let rooms = []
+    for(let y = 0; y < 11; y++) {
+      for(let x = 0; x < 11; x++) {
+        let room = `W${x}N${y}`
+        api.socket.send(`subscribe roomMap2:${room}`)
+        rooms.push(new Promise((resolve,reject) => {
+          api.socket.once(`roomMap2:${room}`, () => resolve())
+        }))
+      }  
+    }
+    api.socket.on(`roomMap2`, ({ id, data }) => {
+      roomCache[opts.hostname][id] = data
+    })
+    console.log('Waiting for events...')
+    await Promise.all(rooms)
   }
-  console.log('auth')
-  console.log(await api.auth())
-  console.log('connect')
-  await api.socket.connect()
-  let rooms = []
-  for(let y = 0; y < 11; y++) {
-    for(let x = 0; x < 11; x++) {
-      let room = `W${x}N${y}`
-      rooms.push({ room, data: roomMapPromise(api, room) })
-    }  
-  }
-  for(let i in rooms){
-    rooms[i].data = await rooms[i].data
-  }
-  let canvas = await renderMap(rooms)
+  console.log('renderMap')
+  let canvas = await renderMap(roomCache[opts.hostname])
+  console.log('returnBuffer')
   return canvas.toBuffer()
 }
 
-function roomMapPromise(api, room) {
-  return new Promise((resolve, reject) => {
-    api.socket.send(`subscribe roomMap2:${room}`)
-    api.socket.on(`roomMap2:${room}`, (map) => {
-      api.socket.send('unsubscribe roomMap2:${room}')
-      resolve(map.data)
-    })
-    api.socket.send('unsubscribe roomMap2:${room}')
-  })
-}
-
 async function renderMap(rooms) {
-  const DIM = Math.sqrt(rooms.length) * 50 //9 * 50
+  const DIM = 11 * 50 //9 * 50
   const canvas = new Canvas(DIM, DIM)
   const ctx = canvas.getContext('2d')
   for(let k in rooms) {
-    await renderRoom(ctx, rooms[k].room, rooms[k].data)
+    await renderRoom(ctx, k, rooms[k])
   }
   return canvas
 }

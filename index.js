@@ -5,9 +5,23 @@ const { send } = require('micro')
 // const crypto = require('crypto')
 const Canvas = require('canvas')
 const axios = require('axios')
+const randomColor = require('randomcolor')
 const imgCache = {}
 const apiCache = {}
 const roomCache = {}
+
+const colors = {
+    2: '#FF0000', // invader
+    3: '#FF0000', // source keeper
+    w: '#555555', // wall
+    r: '#CCCCCC', // road
+    pb: '#FFFFFF', // powerbank
+    p: '#0000FF', // portal
+    s: '#FAFA00', // source
+    m: '#00FF00', // mineral
+    c: '#777777', // controller
+    k: '#FF0000', // keeperLair
+}
 
 const config = {
   register: true,
@@ -36,6 +50,16 @@ const config = {
 //     await writeFile('./pw', pw)
 //   }
 // }
+
+function getColor(identifier) {
+    if (!colors[identifier]) {
+        colors[identifier] = randomColor({
+            luminosity: 'bright',
+            seed: identifier,
+        })
+    }
+    return colors[identifier]
+}
 
 function getMapImageUrl(room) {
   return `${config.protocol}://${config.hostname}:${config.port}/assets/map/${room}.png`
@@ -130,23 +154,11 @@ async function renderRoom(ctx, room, data) {
   let bx = (10 - rx) * 50
   let by = (10 - ry) * 50
 
-  let colors = {
-    default: '#ff0000',
-    player: '#ff5555',
-    w: '#555555', // wall
-    r: '#CCCCCC', // road
-    pb: '#FFFFFF', // powerbank
-    p: '#0000FF', // portal
-    s: '#FAFA00', // source
-    m: '#00FF00', // mineral
-    c: '#777777', // controller
-    k: '#FF0000', // keeperLair
-  }
   let img = await getMapImage(room)
   ctx.drawImage(img, bx, by, 50, 50)
   for(let k in data) {
     let arr = data[k]
-    ctx.fillStyle = colors[k] || (k.length > 2 ? colors.player : colors.default)
+    ctx.fillStyle = getColor(k)
     arr.forEach(([x,y]) => {
       ctx.beginPath()
       ctx.rect(bx + x, by + y, 1, 1)

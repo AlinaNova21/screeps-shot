@@ -1,10 +1,11 @@
 const { ScreepsAPI } = require('screeps-api')
 const { send } = require('micro')
-// const fs = require('fs')
-// const util = require('util')
+const fs = require('fs')
+const util = require('util')
 // const crypto = require('crypto')
 const Canvas = require('canvas')
 const axios = require('axios')
+const Stream = require('./stream')
 const randomColor = require('randomcolor')
 const imgCache = {}
 const apiCache = {}
@@ -34,7 +35,7 @@ const config = {
   password: 'CaptureBot'
 }
 
-// const readFile = util.promisify(fs.readFile)
+const readFile = util.promisify(fs.readFile)
 // const writeFile = util.promisify(fs.writeFile)
 // const randomBytes = util.promisify(crypto.randomBytes)
 
@@ -75,22 +76,48 @@ async function getMapImage(room) {
   return img
 }
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   if(req.url.match('favico')) return ''
-  let [,proto,hostname,port] = req.url.split('/')
+  let [,proto,hostname,port,mode = 'image'] = req.url.split('/')
   if(!proto || !hostname || !port) {
     res.setHeader('content-type','text/html')
     return 'URL must be in the form of /proto/hostname/port. ex: <a href="/http/botarena.screepspl.us/21025">/http/botarena.screepspl.us/21025</a>'
   }
-  // await api.raw.
-  console.log(req.headers)
-  if (req.headers['if-none-match'] === etag()) {
-    return send(res, 304, 'Not Modified')
+
+  if(mode === 'stream') {
+    let s = new Stream(req, res)
+    let handler = async () => {
+      let frame = await captureMap({ proto, hostname, port })
+      frame = 'data:image/png;base64,' + frame.toString('base64')
+      s.send('frame', frame)
+    }
+    await handler()
+    let cnt = 0
+    let api = apiCache[hostname]
+    api.socket.on('roomMap2:W10N10', handler)
+    res.on('end', () => {
+      console.log('detach')
+      api.socket.off('roomMap2:W10N10', handler)
+    })
+    console.log('return')
+    return undefined
+    // return new Promise(() => {})
   }
-  res.setHeader('content-type','image/png')
-  // res.setHeader('cache-control','max-age=10')
-  // res.setHeader('etag', etag())
-  return captureMap({ proto, hostname, port })
+  if(mode === 'viewer') {
+    res.setHeader('content-type', 'text/html')
+    return await readFile('./static/viewer.html', 'utf8')
+  }
+  if(mode === 'image') {
+    // await api.raw.
+    console.log(req.headers)
+    if (req.headers['if-none-match'] === etag()) {
+      return send(res, 304, 'Not Modified')
+    }
+    res.setHeader('content-type','image/png')
+    // res.setHeader('cache-control','max-age=10')
+    // res.setHeader('etag', etag())
+    return captureMap({ proto, hostname, port })
+  }
 }
 
 function etag() {

@@ -101,10 +101,8 @@ module.exports = async (req, res) => {
     let api = apiCache[hostname]
     api.socket.on('roomMap2:W10N10', handler)
     res.on('end', () => {
-      console.log('detach')
       api.socket.off('roomMap2:W10N10', handler)
     })
-    console.log('return')
     return undefined
     // return new Promise(() => {})
   }
@@ -165,9 +163,7 @@ async function captureMap (opts) {
     console.log('Waiting for events...')
     await Promise.all(rooms)
   }
-  console.log('renderMap')
   let canvas = await renderMap(roomCache[opts.hostname])
-  console.log('returnBuffer')
   return canvas.toBuffer()
 }
 

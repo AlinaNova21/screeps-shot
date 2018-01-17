@@ -4,6 +4,7 @@
     "canvas": "^1.6.9",
     "micro": "^9.1.0",
     "micro-dev": "^2.2.0",
+    "randomcolor": "^0.5.3",
     "screeps-api": "^1.4.0"
   },
   "scripts": {

@@ -12,16 +12,16 @@ const apiCache = {}
 const roomCache = {}
 
 const colors = {
-    2: '#FF0000', // invader
-    3: '#FF0000', // source keeper
-    w: '#555555', // wall
-    r: '#CCCCCC', // road
+    2: '#FF9600', // invader
+    3: '#FF9600', // source keeper
+    w: '#000000', // wall
+    r: '#3C3C3C', // road
     pb: '#FFFFFF', // powerbank
-    p: '#0000FF', // portal
-    s: '#FAFA00', // source
-    m: '#00FF00', // mineral
-    c: '#777777', // controller
-    k: '#FF0000', // keeperLair
+    p: '#00C8FF', // portal
+    s: '#FFF246', // source
+    m: '#AAAAAA', // mineral
+    c: '#505050', // controller
+    k: '#640000', // keeperLair
 }
 
 const config = {

@@ -81,7 +81,12 @@ module.exports = async (req, res) => {
   let [,proto,hostname,port,mode = 'image'] = req.url.split('/')
   if(!proto || !hostname || !port) {
     res.setHeader('content-type','text/html')
-    return 'URL must be in the form of /proto/hostname/port. ex: <a href="/http/botarena.screepspl.us/21025">/http/botarena.screepspl.us/21025</a>'
+    return `
+    URL must be in the form of /proto/hostname/port. 
+    ex: <a href="/http/botarena.screepspl.us/21025">/http/botarena.screepspl.us/21025</a>
+    you can view a live-updating view by appending /viewer
+    ex: <a href="/http/botarena.screepspl.us/21025/viewer">/http/botarena.screepspl.us/21025/viewer</a>
+    `
   }
 
   if(mode === 'stream') {

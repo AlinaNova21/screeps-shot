@@ -42,10 +42,12 @@
 			function render() {
 				requestAnimationFrame(render)
 				if(update){
-					let x = Math.floor((canvas.width / 2) - (frame.width / 2))
-					let y = Math.floor((canvas.height / 2) - (frame.height / 2))
+					let s = Math.min(canvas.width, canvas.height)
+					let r = s / frame.width
+					let x = Math.floor((canvas.width / 2) - (s / 2))
+					let y = Math.floor((canvas.height / 2) - (s / 2))
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
-					ctx.drawImage(frame, x, y)
+					ctx.drawImage(frame, x, y, frame.width * r, frame.height * r)
 					update = false
 				}
 			}

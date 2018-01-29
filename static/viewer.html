@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Viewer</title>
+		<script src="/randomColor.js"></script>
 	</head>
 	<body>
 		<canvas id="canvas"></canvas>
@@ -25,14 +26,36 @@
 		<script>
 			let ctx = canvas.getContext('2d')
 			let es = new EventSource(location.href.replace(/viewer$/,'stream'))
+			let rooms = {}
 			let frame = new Image()
 			frame.onload = () => update = true
 			let update = false
+			let imgCache = {}
 
-
-			es.addEventListener('frame', (msg) => {
-				if(update) return
-				frame.src = msg.data
+			es.addEventListener('frame', async (msg) => {
+				let { room, data } = JSON.parse(msg.data)
+				if (!rooms[room]) {
+					let img = new Image()
+					let { x, y } = XYFromRoom(room)
+					rooms[room] = {
+						room,
+						img,
+						x: x * 50, 
+						y: y * 50,
+						async update(data) {
+							const canvas = document.createElement('canvas') //new Canvas(50, 50)
+							canvas.width = 50
+							canvas.height = 50
+				      const ctx = canvas.getContext('2d')
+				      let img = await getMapImage(this.room)
+				      ctx.drawImage(img, 0, 0, 50, 50)
+				      await renderRoom(ctx, data)
+				      this.img = canvas
+						}
+					}
+					// imga.onload = () => rooms[room].update = true
+				}
+				rooms[room].update(data)
 			})
 			window.addEventListener('resize', resize)
 			resize()
@@ -41,7 +64,14 @@
 
 			function render() {
 				requestAnimationFrame(render)
-				if(update){
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				// let keys = Object.keys(rooms)
+				for(let k in rooms) {
+					let room = rooms[k]
+					ctx.drawImage(room.img, room.x, room.y, 50, 50)
+				}
+
+				if(false && update){
 					let s = Math.min(canvas.width, canvas.height)
 					let r = s / frame.width
 					let x = Math.floor((canvas.width / 2) - (s / 2))
@@ -55,6 +85,85 @@
 			function resize() {
 				canvas.width = window.innerWidth
 				canvas.height = window.innerHeight
+			}
+
+
+			function XYToRoom (x, y) {
+			  let dx = 'E'
+			  let dy = 'S'
+			  if (x < 0) {
+			    x = -x - 1
+			    dx = 'W'
+			  }
+			  if (y < 0) {
+			    y = -y - 1
+			    dy = 'N'
+			  }
+			  return `${dx}${x}${dy}${y}`
+			}
+
+			function XYFromRoom (room) {
+			  let [, dx, x, dy, y] = room.match(/^([WE])(\d+)([NS])(\d+)$/)
+			  x = parseInt(x)
+			  y = parseInt(y)
+			  if (dx === 'W') x = -x - 1
+			  if (dy === 'N') y = -y - 1
+			  return { x, y }
+			}
+
+			const colors = {
+			  2: '#FF9600', // invader
+			  3: '#FF9600', // source keeper
+			  w: '#000000', // wall
+			  r: '#3C3C3C', // road
+			  pb: '#FFFFFF', // powerbank
+			  p: '#00C8FF', // portal
+			  s: '#FFF246', // source
+			  m: '#AAAAAA', // mineral
+			  c: '#505050', // controller
+			  k: '#640000' // keeperLair
+			}
+
+			function getColor (identifier) {
+			  if (!colors[identifier]) {
+			    colors[identifier] = randomColor({
+			      luminosity: 'bright',
+			      seed: identifier
+			    })
+			  }
+			  return colors[identifier]
+			}			
+			async function renderRoom (ctx, data) {
+			  for (let k in data) {
+			    let arr = data[k]
+			    ctx.fillStyle = getColor(k)
+			    arr.forEach(([x, y]) => {
+			      ctx.beginPath()
+			      ctx.rect(x, y, 1, 1)
+			      ctx.fill()
+			    })
+			  }
+			}
+
+			function getMapImageUrl (room) {
+				let [,protocol,hostname,port] = location.pathname.split('/')
+			  // return `${protocol}://${hostname}:${port}/assets/map/${room}.png`
+			  return location.href.replace(/viewer$/, `roomImage/${room}`)
+			}
+
+			async function getMapImage (room) {
+			  if (imgCache[room]) return await imgCache[room]
+			  const url = getMapImageUrl(room)
+			  // const data = await fetch(url, { responseType: 'arraybuffer', mode: 'no-cors' })
+			  const img = new Image()
+			  img.src = url
+			  let prom = new Promise((resolve,reject) => {
+			  	img.onload = () => resolve(img)
+			  	imgCache[room] = img
+			  })
+			  imgCache[room] = prom
+			  return prom
+			  // return img
 			}
 		</script>
 	</body>

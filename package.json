@@ -5,7 +5,8 @@
     "micro": "^9.1.0",
     "micro-dev": "^2.2.0",
     "randomcolor": "^0.5.3",
-    "screeps-api": "^1.4.0"
+    "screeps-api": "^1.4.0",
+    "seedrandom": "^2.4.3"
   },
   "scripts": {
     "start": "micro",

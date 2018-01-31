@@ -4,6 +4,7 @@
 		<meta charset="UTF-8">
 		<title>Viewer</title>
 		<script src="/randomColor.js"></script>
+		<script src="/seedrandom.js"></script>
 	</head>
 	<body>
 		<canvas id="canvas"></canvas>
@@ -126,9 +127,11 @@
 
 			function getColor (identifier) {
 			  if (!colors[identifier]) {
+				Math.seedrandom(identifier);
+				const seed = Math.random().toString();
 			    colors[identifier] = randomColor({
 			      luminosity: 'bright',
-			      seed: identifier
+			      seed
 			    })
 			  }
 			  return colors[identifier]

@@ -7,6 +7,7 @@ const Canvas = require('canvas')
 const axios = require('axios')
 const Stream = require('./stream')
 const randomColor = require('randomcolor')
+const seedrandom = require('seedrandom')
 const imgCache = {}
 const apiCache = {}
 const roomCache = {}
@@ -54,9 +55,11 @@ const readFile = util.promisify(fs.readFile)
 
 function getColor (identifier) {
   if (!colors[identifier]) {
+    Math.seedrandom(identifier);
+    const seed = Math.random().toString();
     colors[identifier] = randomColor({
       luminosity: 'bright',
-      seed: identifier
+      seed
     })
   }
   return colors[identifier]
@@ -79,8 +82,12 @@ async function getMapImage (config, room) {
 module.exports = async (req, res) => {
   if (req.url.match('favico')) return ''
   if (req.url.match('randomColor')) {
-    res.setHeader('content-type', 'application/javascript')
-    return await readFile('./node_modules/randomcolor/randomColor.js', 'utf8')
+      res.setHeader('content-type', 'application/javascript')
+      return await readFile('./node_modules/randomcolor/randomColor.js', 'utf8')
+  }
+  if (req.url.match('seedrandom')) {
+      res.setHeader('content-type', 'application/javascript')
+      return await readFile('./node_modules/seedrandom/seedrandom.js', 'utf8')
   }
   let [, protocol, hostname, port, mode = 'image', roomName] = req.url.split('/')
   if (!protocol || !hostname || !port) {

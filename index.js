@@ -55,8 +55,8 @@ const readFile = util.promisify(fs.readFile)
 
 function getColor (identifier) {
   if (!colors[identifier]) {
-    Math.seedrandom(identifier);
-    const seed = Math.random().toString();
+    Math.seedrandom(identifier)
+    const seed = Math.random().toString()
     colors[identifier] = randomColor({
       luminosity: 'bright',
       seed
@@ -70,24 +70,25 @@ function getMapImageUrl (config, room) {
 }
 
 async function getMapImage (config, room) {
-  if (imgCache[room]) return imgCache[room]
+  let cache = imgCache[config.hostname] = imgCache[config.hostname] || {}
+  if (cache[room]) return cache[room]
   const url = await getMapImageUrl(config, room)
   const data = await axios.get(url, { responseType: 'arraybuffer' })
   // const img = new Canvas.Image()
   // img.src = data.data
-  imgCache[room] = data.data // img
+  cache[room] = data.data // img
   return data.data // img
 }
 
 module.exports = async (req, res) => {
   if (req.url.match('favico')) return ''
   if (req.url.match('randomColor')) {
-      res.setHeader('content-type', 'application/javascript')
-      return await readFile('./node_modules/randomcolor/randomColor.js', 'utf8')
+    res.setHeader('content-type', 'application/javascript')
+    return await readFile('./node_modules/randomcolor/randomColor.js', 'utf8')
   }
   if (req.url.match('seedrandom')) {
-      res.setHeader('content-type', 'application/javascript')
-      return await readFile('./node_modules/seedrandom/seedrandom.js', 'utf8')
+    res.setHeader('content-type', 'application/javascript')
+    return await readFile('./node_modules/seedrandom/seedrandom.js', 'utf8')
   }
   let [, protocol, hostname, port, mode = 'image', roomName] = req.url.split('/')
   if (!protocol || !hostname || !port) {
@@ -254,7 +255,7 @@ function XYFromRoom (room) {
 async function getMapRooms (api, shard = 'shard0') {
   let visited = {}
   console.log('Scanning sectors')
-  let sectors = await scanSectors(-5, -5)
+  let sectors = await scanSectors()
   let rooms = []
   console.log('Sectors found:', sectors)
   for (let room of sectors) {
@@ -274,7 +275,7 @@ async function getMapRooms (api, shard = 'shard0') {
     let rooms = []
     for (let yo = -10; yo <= 10; yo++) {
       for (let xo = -10; xo <= 10; xo++) {
-        let room = XYToRoom(xo * 10, yo * 10)
+        let room = XYToRoom((xo * 10) + 5, (yo * 10) + 5)
         rooms.push(room)
       }
     }

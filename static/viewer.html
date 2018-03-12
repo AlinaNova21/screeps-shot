@@ -33,6 +33,14 @@
 			let update = false
 			let imgCache = {}
 
+			function minxy () {
+				return Object.keys(rooms)
+					.map((r) => XYFromRoom(r))
+					.map(({x, y}) => ([x, y]))
+					.reduce(([lx, ly], [rx, ry]) => ([Math.min(lx, rx), Math.min(ly, ry)]), [0, 0])
+					.map(v => v * -50)
+			}
+
 			es.addEventListener('frame', async (msg) => {
 				let { room, data } = JSON.parse(msg.data)
 				if (!rooms[room]) {
@@ -64,12 +72,12 @@
 
 
 			function render() {
-				requestAnimationFrame(render)
+				requestAnimationFrame(render)				
 				ctx.clearRect(0, 0, canvas.width, canvas.height);
-				// let keys = Object.keys(rooms)
+				let [ox, oy] = minxy()
 				for(let k in rooms) {
 					let room = rooms[k]
-					ctx.drawImage(room.img, room.x, room.y, 50, 50)
+					ctx.drawImage(room.img, room.x + ox, room.y + oy, 50, 50)
 				}
 
 				if(false && update){

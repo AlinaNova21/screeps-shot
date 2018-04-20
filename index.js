@@ -129,6 +129,10 @@ module.exports = async (req, res) => {
     res.on('end', () => {
       api.socket.off('roomMap2', handler)
     })
+    Object.keys(roomCache[opts.hostname]).forEach(id => {
+      const data = roomCache[opts.hostname][id]
+      s.send('frame', { room: id, data })
+    })
     return undefined
     // return new Promise(() => {})
   }

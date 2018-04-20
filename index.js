@@ -11,6 +11,7 @@ const seedrandom = require('seedrandom')
 const imgCache = {}
 const apiCache = {}
 const roomCache = {}
+const userCache = {}
 
 const colors = {
   2: '#FF9600', // invader
@@ -119,7 +120,8 @@ module.exports = async (req, res) => {
       // await renderRoom(ctx, data)
       // let frame = await canvas.toBuffer()
       // frame = 'data:image/png;base64,' + frame.toString('base64')
-      s.send('frame', { room: id, data })
+      const { info } = roomCache[hostname][id] || {}
+      s.send('frame', { room: id, data, info })
     }
     // await handler()
     await captureMap({ protocol, hostname, port })
@@ -129,10 +131,12 @@ module.exports = async (req, res) => {
     res.on('end', () => {
       api.socket.off('roomMap2', handler)
     })
-    Object.keys(roomCache[opts.hostname]).forEach(id => {
-      const data = roomCache[opts.hostname][id]
-      s.send('frame', { room: id, data })
-    })
+    setTimeout(() => {
+      Object.keys(roomCache[hostname]).forEach(id => {
+        const { data } = roomCache[hostname][id]
+        handler({ id, data })
+      })
+    },100)
     return undefined
     // return new Promise(() => {})
   }
@@ -145,9 +149,13 @@ module.exports = async (req, res) => {
     res.setHeader('content-type', 'image/png')
     return img
   }
+  if (mode === 'badge') {
+    let img = await getBadgeImage({ protocol, hostname, port }, roomName)
+    res.setHeader('content-type', 'application/xml+svg')
+    return img
+  }
   if (mode === 'image') {
     // await api.raw.
-    console.log(req.headers)
     if (req.headers['if-none-match'] === etag()) {
       return send(res, 304, 'Not Modified')
     }
@@ -182,30 +190,46 @@ async function captureMap (opts) {
     console.log('connect')
     await api.socket.connect()
     roomCache[opts.hostname] = {}
-    // let rooms = []
-    // for (let y = 0; y < 11; y++) {
-    //   for (let x = 0; x < 11; x++) {
-    //     let room = `W${x}N${y}`
-    //     api.socket.send(`subscribe roomMap2:${room}`)
-    //     rooms.push(new Promise((resolve, reject) => {
-    //       api.socket.once(`roomMap2:${room}`, () => resolve())
-    //     }))
-    //   }
-    // }
-    // try {
-    let rooms = await getMapRooms(api)
-    rooms.forEach(room => api.socket.send(`subscribe roomMap2:${room}`))
-    // } catch (e) {
-      // console.error(e)
-    // }
+    userCache[opts.hostname] = {}
+    try {
+      const { rooms, users } = await updateMap(opts, api)
+
+
+      rooms.forEach(info => {
+        api.socket.send(`subscribe roomMap2:${info.id}`)
+      })
+    } catch(e) {
+      console.error(e)
+    }
     api.socket.on(`roomMap2`, ({ id, data }) => {
-      roomCache[opts.hostname][id] = data
+      roomCache[opts.hostname][id].data = data
     })
     console.log('Waiting for events...')
-    // await Promise.all(rooms)
   }
-  // let canvas = await renderMap(roomCache[opts.hostname])
-  // return canvas.toBuffer()
+}
+
+async function updateMap (opts, api) {
+  const { rooms, users } = await getMapRooms(api)
+  const baseURL = `${opts.protocol}://${opts.hostname}:${opts.port}`
+  for (let uid in users) {
+    const user = users[uid]
+    const oldUser = userCache[opts.hostname][uid]
+    userCache[opts.hostname][uid] = user
+    if (oldUser && oldUser.badgeSvg) {
+      user.badgeSvg = oldUser.badgeSvg
+    } else {
+      axios.get(`${baseURL}/api/user/badge-svg?username=${user.username}`).then(({data: svg}) => {
+        user.badgeSvg = svg
+      }).catch(e => console.error(e))      
+    }
+  }
+  rooms.forEach(info => {
+    if (info.own) {
+      info.own.user = users[info.own.user] || {}
+    }
+    roomCache[opts.hostname][info.id] = { info, data: {} }
+  })
+  return { rooms, users }
 }
 
 async function renderMap (rooms) {
@@ -259,21 +283,21 @@ function XYFromRoom (room) {
 async function getMapRooms (api, shard = 'shard0') {
   let visited = {}
   console.log('Scanning sectors')
-  let sectors = await scanSectors()
-  let rooms = []
+  const sectors = await scanSectors()
+  let roomsToScan = []
   console.log('Sectors found:', sectors)
   for (let room of sectors) {
     let { x, y } = XYFromRoom(room)
     for (let xx = 0; xx < 12; xx++) {
       for (let yy = 0; yy < 12; yy++) {
         let room = XYToRoom(x + xx - 6, y + yy - 6)
-        rooms.push(room)
+        roomsToScan.push(room)
       }
     }
   }
-  rooms = await scan(rooms)
+  const { rooms, users } = await scan(roomsToScan)
   console.log(`GetMapRooms found ${rooms.length} rooms`)
-  return rooms
+  return { rooms, users }
 
   async function scanSectors () {
     let rooms = []
@@ -284,7 +308,7 @@ async function getMapRooms (api, shard = 'shard0') {
       }
     }
     let result = await scan(rooms)
-    return result
+    return result.rooms.map(r => r.id)
   }
 
   async function scan (rooms = []) {
@@ -295,13 +319,14 @@ async function getMapRooms (api, shard = 'shard0') {
     let ret = []
     // console.log(result)
     for (let k in result.stats) {
-      let { status } = result.stats[k]
+      let { status, own } = result.stats[k]
+      result.stats[k].id = k
       if (status === 'normal') {
         visited[k] = true
-        ret.push(k)
+        ret.push(result.stats[k])
       }
     }
     // console.log('Found', ret)
-    return ret
+    return { rooms: ret, users: result.users }
   }
 }

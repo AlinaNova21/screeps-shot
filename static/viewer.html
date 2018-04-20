@@ -37,12 +37,12 @@
 				return Object.keys(rooms)
 					.map((r) => XYFromRoom(r))
 					.map(({x, y}) => ([x, y]))
-					.reduce(([lx, ly], [rx, ry]) => ([Math.min(lx, rx), Math.min(ly, ry)]), [0, 0])
+					.reduce(([lx, ly], [rx, ry]) => ([Math.min(lx, rx), Math.min(ly, ry)]), [1000, 1000])
 					.map(v => v * -50)
 			}
 
 			es.addEventListener('frame', async (msg) => {
-				let { room, data } = JSON.parse(msg.data)
+				let { room, data, info } = JSON.parse(msg.data)
 				if (!rooms[room]) {
 					let img = new Image()
 					let { x, y } = XYFromRoom(room)
@@ -51,7 +51,7 @@
 						img,
 						x: x * 50, 
 						y: y * 50,
-						async update(data) {
+						async update(data, info = {}) {
 							const canvas = document.createElement('canvas') //new Canvas(50, 50)
 							canvas.width = 50
 							canvas.height = 50
@@ -59,12 +59,22 @@
 				      let img = await getMapImage(this.room)
 				      ctx.drawImage(img, 0, 0, 50, 50)
 				      await renderRoom(ctx, data)
+				      if (info && info.own && info.own.user && info.own.user.badgeSvg) {
+				      	try {
+					      	const img = await loadImage(`data:image/svg+xml,${info.own.user.badgeSvg}`)
+					      	ctx.globalAlpha = 0.3
+					      	ctx.drawImage(img, 10, 10, 30, 30)
+					      	ctx.globalAlpha = 1
+					      } catch(e) {
+					      	console.error(`update failed for ${data.room}`, e)
+					      }
+				      }
 				      this.img = canvas
 						}
 					}
 					// imga.onload = () => rooms[room].update = true
 				}
-				rooms[room].update(data)
+				rooms[room].update(data, info)
 			})
 			window.addEventListener('resize', resize)
 			resize()
@@ -162,6 +172,12 @@
 			  return location.href.replace(/viewer$/, `roomImage/${room}`)
 			}
 
+			function getBadgeImageUrl (username) {
+				let [,protocol,hostname,port] = location.pathname.split('/')
+			  // return `${protocol}://${hostname}:${port}/assets/map/${room}.png`
+			  return location.href.replace(/viewer$/, `badge/${room}`)
+			}
+
 			async function getMapImage (room) {
 			  if (imgCache[room]) return await imgCache[room]
 			  const url = getMapImageUrl(room)
@@ -175,6 +191,29 @@
 			  imgCache[room] = prom
 			  return prom
 			  // return img
+			}
+			async function getBadgeImage (username) {
+			  if (imgCache[username]) return await imgCache[username]
+			  const url = getBadgeImageUrl(username)
+			  // const data = await fetch(url, { responseType: 'arraybuffer', mode: 'no-cors' })
+			  const img = new Image()
+			  img.src = url
+			  let prom = new Promise((resolve,reject) => {
+			  	img.onload = () => resolve(img)
+			  	imgCache[username] = img
+			  })
+			  imgCache[username] = prom
+			  return prom
+			  // return img
+			}
+
+			function loadImage(url) {
+				const img = new Image()
+			  return new Promise((resolve,reject) => {
+			  	img.src = url
+			  	img.onload = () => resolve(img)
+			  	img.onerror = (e) => reject(e)
+			  })
 			}
 		</script>
 	</body>

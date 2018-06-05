@@ -109,6 +109,7 @@ module.exports = async (req, res) => {
   }
 
   if (mode === 'stream') {
+    try {
     let s = new Stream(req, res)
     let handler = async ({ id, data }) => {
       await captureMap({ protocol, hostname, port })
@@ -137,6 +138,9 @@ module.exports = async (req, res) => {
         handler({ id, data })
       })
     },100)
+      } catch (e) {
+        console.error(e)
+      }
     return undefined
     // return new Promise(() => {})
   }
@@ -184,7 +188,7 @@ async function captureMap (opts) {
         api.socket.disconnect()
       } catch (e) {}
     }
-    api = new ScreepsAPI()
+    api = apiCache[opts.hostname] = new ScreepsAPI()
     api.setServer(Object.assign({}, config, opts))
     if (config.register) {
       console.log('register')

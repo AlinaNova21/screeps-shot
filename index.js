@@ -177,9 +177,14 @@ async function captureMap (opts) {
   //   }
   // }
   let api = apiCache[opts.hostname]
-  if (!api || api.socket.readyState !== api.socket.OPEN) {
+  if (!api || api.socket.ws.readyState !== api.socket.ws.OPEN) {
     console.log(`Connecting to ${opts.hostname}`)
-    api = apiCache[opts.hostname] = new ScreepsAPI()
+    if(api) {
+      try {
+        api.socket.disconnect()
+      } catch (e) {}
+    }
+    api = new ScreepsAPI()
     api.setServer(Object.assign({}, config, opts))
     if (config.register) {
       console.log('register')

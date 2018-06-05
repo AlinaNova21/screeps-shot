@@ -111,8 +111,11 @@ module.exports = async (req, res) => {
   if (mode === 'stream') {
     try {
     let s = new Stream(req, res)
+    let sTimeout = 0
     let handler = async ({ id, data }) => {
       await captureMap({ protocol, hostname, port })
+      clearTimeout(sTimeout)
+      sTimeout = setTimeout(() => res.end(), 10000)
       // const DIM = 50 // 9 * 50
       // const canvas = new Canvas(DIM, DIM)
       // const ctx = canvas.getContext('2d')
@@ -210,7 +213,14 @@ async function captureMap (opts) {
     } catch(e) {
       console.error(e)
     }
+    let connectionTimeout = 0
     api.socket.on(`roomMap2`, ({ id, data }) => {
+      clearTimeout(connectionTimeout)
+      connectionTimeout = setTimeout(() => {
+        console.log(`${opts.hostname}: Event timed out, disconnecting`)
+        apiCache[opts.hostname] = null
+        api.socket.disconnect()
+      }, 10000)
       roomCache[opts.hostname][id].data = data
     })
     console.log('Waiting for events...')

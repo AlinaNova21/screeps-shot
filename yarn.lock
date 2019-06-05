@@ -266,9 +266,9 @@ camelcase@^4.0.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/camelcase/-/camelcase-4.1.0.tgz#d545635be1e33c542649c69173e5de6acfae34dd"
 
-canvas@^1.6.9:
-  version "1.6.9"
-  resolved "https://registry.yarnpkg.com/canvas/-/canvas-1.6.9.tgz#e3f95cec7b16bf2d6f3fc725c02d940d3258f69b"
+canvas@^1.6.10:
+  version "1.6.10"
+  resolved "https://registry.yarnpkg.com/canvas/-/canvas-1.6.10.tgz#aa938354642e7d61479ae5a76373b3233d7bbac8"
   dependencies:
     nan "^2.4.0"
 

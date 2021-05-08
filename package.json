@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "axios": "^0.18.1",
-    "canvas": "^1.6.9",
+    "canvas": "^1.6.11",
     "micro": "^9.1.0",
     "micro-dev": "^2.2.0",
     "randomcolor": "^0.5.3",
